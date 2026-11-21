@@ -1,0 +1,502 @@
+{
+  "generated_at": "2026-11-21T16:32:11",
+  "seed": 42,
+  "count": 30,
+  "cases": [
+    {
+      "question": "2025-01的销售额是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(actual_amount),2) FROM orders WHERE substr(order_date,1,7)=? AND status='已完成'",
+      "expected": 1064843.54,
+      "params": [
+        "2025-01"
+      ],
+      "note": "",
+      "id": "r001",
+      "category": "聚合统计",
+      "seed": 42
+    },
+    {
+      "question": "各品类的销售额从高到低分别是多少？",
+      "oracle_sql": "SELECT p.category, ROUND(SUM(oi.subtotal),2) AS v FROM order_items oi\n             JOIN products p ON oi.product_id=p.id JOIN orders o ON oi.order_id=o.id\n             WHERE o.status='已完成' GROUP BY p.category ORDER BY v DESC",
+      "expected": [
+        [
+          "电子产品",
+          26509398.0
+        ],
+        [
+          "服装",
+          7725961.0
+        ],
+        [
+          "家居",
+          5542999.0
+        ],
+        [
+          "食品",
+          1944073.0
+        ]
+      ],
+      "params": [],
+      "note": "",
+      "id": "r002",
+      "category": "分组分析",
+      "seed": 42
+    },
+    {
+      "question": "各会员等级的订单量从高到低排列？",
+      "oracle_sql": "SELECT c.member_level, COUNT(*) AS n FROM orders o\n             JOIN customers c ON o.customer_id=c.id\n             WHERE o.status='已完成' GROUP BY c.member_level ORDER BY n DESC",
+      "expected": [
+        [
+          "普通",
+          8977
+        ],
+        [
+          "银卡",
+          5660
+        ],
+        [
+          "金卡",
+          3454
+        ],
+        [
+          "白金",
+          1325
+        ]
+      ],
+      "params": [],
+      "note": "",
+      "id": "r003",
+      "category": "分组分析",
+      "seed": 42
+    },
+    {
+      "question": "微信渠道的活动预算总和是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(budget),2) FROM activities WHERE channel=?",
+      "expected": 288323.7,
+      "params": [
+        "微信"
+      ],
+      "note": "",
+      "id": "r004",
+      "category": "聚合统计",
+      "seed": 42
+    },
+    {
+      "question": "使用现金方式支付的已完成订单有多少笔？",
+      "oracle_sql": "SELECT COUNT(*) FROM orders WHERE payment_method=? AND status='已完成'",
+      "expected": 999,
+      "params": [
+        "现金"
+      ],
+      "note": "",
+      "id": "r005",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "普通会员有多少个客户？",
+      "oracle_sql": "SELECT COUNT(*) FROM customers WHERE member_level=?",
+      "expected": 275,
+      "params": [
+        "普通"
+      ],
+      "note": "",
+      "id": "r006",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "使用支付宝方式支付的已完成订单有多少笔？",
+      "oracle_sql": "SELECT COUNT(*) FROM orders WHERE payment_method=? AND status='已完成'",
+      "expected": 6747,
+      "params": [
+        "支付宝"
+      ],
+      "note": "",
+      "id": "r007",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "销售额前5的城市是哪些？",
+      "oracle_sql": "SELECT s.city, ROUND(SUM(o.actual_amount),2) AS v FROM orders o\n             JOIN stores s ON o.store_id=s.id WHERE o.status='已完成'\n             GROUP BY s.city ORDER BY v DESC LIMIT 5",
+      "expected": [
+        [
+          "太原",
+          2004128.55
+        ],
+        [
+          "昆明",
+          1948824.72
+        ],
+        [
+          "石家庄",
+          1934036.9
+        ],
+        [
+          "宁波",
+          1917794.16
+        ],
+        [
+          "南京",
+          1910394.96
+        ]
+      ],
+      "params": [],
+      "note": "",
+      "id": "r008",
+      "category": "多表关联",
+      "seed": 42
+    },
+    {
+      "question": "华中地区已完成的订单有多少笔？",
+      "oracle_sql": "SELECT COUNT(*) FROM orders o JOIN stores s ON o.store_id=s.id WHERE s.region=? AND o.status='已完成'",
+      "expected": 2665,
+      "params": [
+        "华中"
+      ],
+      "note": "",
+      "id": "r009",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "各地区的销售额从高到低分别是多少？",
+      "oracle_sql": "SELECT s.region, ROUND(SUM(o.actual_amount),2) AS v\n             FROM orders o JOIN stores s ON o.store_id=s.id\n             WHERE o.status='已完成' GROUP BY s.region ORDER BY v DESC",
+      "expected": [
+        [
+          "华东",
+          9467172.76
+        ],
+        [
+          "华南",
+          9242821.68
+        ],
+        [
+          "华北",
+          7553834.96
+        ],
+        [
+          "西南",
+          7471318.02
+        ],
+        [
+          "华中",
+          5372295.85
+        ]
+      ],
+      "params": [],
+      "note": "",
+      "id": "r010",
+      "category": "分组分析",
+      "seed": 42
+    },
+    {
+      "question": "抖音渠道的优惠券核销率是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(CASE WHEN c.status='已核销' THEN 1 ELSE 0 END)*1.0/COUNT(c.id),4)\n             FROM coupons c JOIN activities a ON c.activity_id=a.id WHERE a.channel=?",
+      "expected": 0.6846,
+      "params": [
+        "抖音"
+      ],
+      "note": "",
+      "id": "r011",
+      "category": "业务指标",
+      "seed": 42
+    },
+    {
+      "question": "家居品类的毛利是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(oi.subtotal - p.cost_price*oi.quantity),2)\n             FROM order_items oi JOIN products p ON oi.product_id=p.id\n             JOIN orders o ON oi.order_id=o.id\n             WHERE p.category=? AND o.status='已完成'",
+      "expected": 2601260.0,
+      "params": [
+        "家居"
+      ],
+      "note": "",
+      "id": "r012",
+      "category": "业务指标",
+      "seed": 42
+    },
+    {
+      "question": "华南地区已完成的订单有多少笔？",
+      "oracle_sql": "SELECT COUNT(*) FROM orders o JOIN stores s ON o.store_id=s.id WHERE s.region=? AND o.status='已完成'",
+      "expected": 4633,
+      "params": [
+        "华南"
+      ],
+      "note": "",
+      "id": "r013",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "小红书渠道的优惠券核销率是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(CASE WHEN c.status='已核销' THEN 1 ELSE 0 END)*1.0/COUNT(c.id),4)\n             FROM coupons c JOIN activities a ON c.activity_id=a.id WHERE a.channel=?",
+      "expected": 0.6145,
+      "params": [
+        "小红书"
+      ],
+      "note": "",
+      "id": "r014",
+      "category": "业务指标",
+      "seed": 42
+    },
+    {
+      "question": "抖音渠道的活动预算总和是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(budget),2) FROM activities WHERE channel=?",
+      "expected": 219101.17,
+      "params": [
+        "抖音"
+      ],
+      "note": "",
+      "id": "r015",
+      "category": "聚合统计",
+      "seed": 42
+    },
+    {
+      "question": "销量最高的3个商品是哪些？",
+      "oracle_sql": "SELECT p.product_name, SUM(oi.quantity) AS q FROM order_items oi\n             JOIN products p ON oi.product_id=p.id GROUP BY p.product_name\n             ORDER BY q DESC LIMIT ?",
+      "expected": [
+        [
+          "蓝牙耳机",
+          4932
+        ],
+        [
+          "充电宝",
+          4881
+        ],
+        [
+          "平板电脑",
+          4855
+        ]
+      ],
+      "params": [
+        3
+      ],
+      "note": "",
+      "id": "r016",
+      "category": "Top-N",
+      "seed": 42
+    },
+    {
+      "question": "2025-06的销售额是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(actual_amount),2) FROM orders WHERE substr(order_date,1,7)=? AND status='已完成'",
+      "expected": 1556856.81,
+      "params": [
+        "2025-06"
+      ],
+      "note": "",
+      "id": "r017",
+      "category": "聚合统计",
+      "seed": 42
+    },
+    {
+      "question": "核销率最高的5个活动是哪些？",
+      "oracle_sql": "SELECT a.activity_name,\n             ROUND(SUM(CASE WHEN c.status='已核销' THEN 1 ELSE 0 END)*1.0/COUNT(c.id),4) AS rate\n             FROM coupons c JOIN activities a ON c.activity_id=a.id\n             GROUP BY a.id, a.activity_name ORDER BY rate DESC LIMIT ?",
+      "expected": [
+        [
+          "2025年6月金秋大促",
+          0.8154
+        ],
+        [
+          "2025年7月冬日大促",
+          0.7907
+        ],
+        [
+          "2025年12月春日大促",
+          0.775
+        ],
+        [
+          "2024年12月春日大促",
+          0.7656
+        ],
+        [
+          "2024年1月夏日大促",
+          0.7612
+        ]
+      ],
+      "params": [
+        5
+      ],
+      "note": "",
+      "id": "r018",
+      "category": "Top-N",
+      "seed": 42
+    },
+    {
+      "question": "白金会员有多少个客户？",
+      "oracle_sql": "SELECT COUNT(*) FROM customers WHERE member_level=?",
+      "expected": 41,
+      "params": [
+        "白金"
+      ],
+      "note": "",
+      "id": "r019",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "2025-07的销售额是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(actual_amount),2) FROM orders WHERE substr(order_date,1,7)=? AND status='已完成'",
+      "expected": 1567502.52,
+      "params": [
+        "2025-07"
+      ],
+      "note": "",
+      "id": "r020",
+      "category": "聚合统计",
+      "seed": 42
+    },
+    {
+      "question": "使用银行卡方式支付的已完成订单有多少笔？",
+      "oracle_sql": "SELECT COUNT(*) FROM orders WHERE payment_method=? AND status='已完成'",
+      "expected": 3866,
+      "params": [
+        "银行卡"
+      ],
+      "note": "",
+      "id": "r021",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "核销率最高的3个活动是哪些？",
+      "oracle_sql": "SELECT a.activity_name,\n             ROUND(SUM(CASE WHEN c.status='已核销' THEN 1 ELSE 0 END)*1.0/COUNT(c.id),4) AS rate\n             FROM coupons c JOIN activities a ON c.activity_id=a.id\n             GROUP BY a.id, a.activity_name ORDER BY rate DESC LIMIT ?",
+      "expected": [
+        [
+          "2025年6月金秋大促",
+          0.8154
+        ],
+        [
+          "2025年7月冬日大促",
+          0.7907
+        ],
+        [
+          "2025年12月春日大促",
+          0.775
+        ]
+      ],
+      "params": [
+        3
+      ],
+      "note": "",
+      "id": "r022",
+      "category": "Top-N",
+      "seed": 42
+    },
+    {
+      "question": "使用微信支付方式支付的已完成订单有多少笔？",
+      "oracle_sql": "SELECT COUNT(*) FROM orders WHERE payment_method=? AND status='已完成'",
+      "expected": 7804,
+      "params": [
+        "微信支付"
+      ],
+      "note": "",
+      "id": "r023",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "销售额最高的3个门店是哪些？",
+      "oracle_sql": "SELECT s.store_name, ROUND(SUM(o.actual_amount),2) AS v FROM orders o\n             JOIN stores s ON o.store_id=s.id WHERE o.status='已完成'\n             GROUP BY s.id, s.store_name ORDER BY v DESC LIMIT ?",
+      "expected": [
+        [
+          "太原体验店",
+          2004128.55
+        ],
+        [
+          "昆明体验店",
+          1948824.72
+        ],
+        [
+          "石家庄体验店",
+          1934036.9
+        ]
+      ],
+      "params": [
+        3
+      ],
+      "note": "",
+      "id": "r024",
+      "category": "Top-N",
+      "seed": 42
+    },
+    {
+      "question": "已领取状态的优惠券有多少张？",
+      "oracle_sql": "SELECT COUNT(*) FROM coupons WHERE status=?",
+      "expected": 1008,
+      "params": [
+        "已领取"
+      ],
+      "note": "",
+      "id": "r025",
+      "category": "聚合统计",
+      "seed": 42
+    },
+    {
+      "question": "金卡会员的平均客单价是多少？",
+      "oracle_sql": "SELECT ROUND(AVG(o.actual_amount),2) FROM orders o\n             JOIN customers c ON o.customer_id=c.id\n             WHERE c.member_level=?",
+      "expected": 2036.34,
+      "params": [
+        "金卡"
+      ],
+      "note": "",
+      "id": "r026",
+      "category": "业务指标",
+      "seed": 42
+    },
+    {
+      "question": "金卡会员有多少个客户？",
+      "oracle_sql": "SELECT COUNT(*) FROM customers WHERE member_level=?",
+      "expected": 108,
+      "params": [
+        "金卡"
+      ],
+      "note": "",
+      "id": "r027",
+      "category": "基础筛选",
+      "seed": 42
+    },
+    {
+      "question": "2024年和2025年的已完成订单量分别是多少？",
+      "oracle_sql": "SELECT substr(order_date,1,4) AS y, COUNT(*) AS n FROM orders\n             WHERE status='已完成' GROUP BY y ORDER BY y",
+      "expected": [
+        [
+          "2024",
+          9759
+        ],
+        [
+          "2025",
+          9657
+        ]
+      ],
+      "params": [],
+      "note": "",
+      "id": "r028",
+      "category": "时间趋势",
+      "seed": 42
+    },
+    {
+      "question": "白金会员的平均客单价是多少？",
+      "oracle_sql": "SELECT ROUND(AVG(o.actual_amount),2) FROM orders o\n             JOIN customers c ON o.customer_id=c.id\n             WHERE c.member_level=?",
+      "expected": 1908.48,
+      "params": [
+        "白金"
+      ],
+      "note": "",
+      "id": "r029",
+      "category": "业务指标",
+      "seed": 42
+    },
+    {
+      "question": "小红书渠道的活动预算总和是多少？",
+      "oracle_sql": "SELECT ROUND(SUM(budget),2) FROM activities WHERE channel=?",
+      "expected": 245347.33,
+      "params": [
+        "小红书"
+      ],
+      "note": "",
+      "id": "r030",
+      "category": "聚合统计",
+      "seed": 42
+    }
+  ]
+}

@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-11-21T16:30:57",
+  "seed": 7,
+  "count": 5,
+  "cases": [
+    {
+      "question": "销量最高的3个商品是哪些？",
+      "oracle_sql": "SELECT p.product_name, SUM(oi.quantity) AS q FROM order_items oi\n             JOIN products p ON oi.product_id=p.id GROUP BY p.product_name\n             ORDER BY q DESC LIMIT ?",
+      "expected": [
+        [
+          "蓝牙耳机",
+          4932
+        ],
+        [
+          "充电宝",
+          4881
+        ],
+        [
+          "平板电脑",
+          4855
+        ]
+      ],
+      "params": [
+        3
+      ],
+      "note": "",
+      "id": "r001",
+      "category": "Top-N",
+      "seed": 7
+    },
+    {
+      "question": "普通会员的平均客单价是多少？",
+      "oracle_sql": "SELECT ROUND(AVG(o.actual_amount),2) FROM orders o\n             JOIN customers c ON o.customer_id=c.id\n             WHERE c.member_level=? AND o.status='已完成'",
+      "expected": 2014.19,
+      "params": [
+        "普通"
+      ],
+      "note": "",
+      "id": "r002",
+      "category": "业务指标",
+      "seed": 7
+    },
+    {
+      "question": "用微信支付支付的已完成订单有多少笔？",
+      "oracle_sql": "SELECT COUNT(*) FROM orders WHERE payment_method=? AND status='已完成'",
+      "expected": 7804,
+      "params": [
+        "微信支付"
+      ],
+      "note": "",
+      "id": "r003",
+      "category": "基础筛选",
+      "seed": 7
+    },
+    {
+      "question": "核销率最高的3个活动是哪些？",
+      "oracle_sql": "SELECT a.activity_name,\n             ROUND(SUM(CASE WHEN c.status='已核销' THEN 1 ELSE 0 END)*1.0/COUNT(c.id),4) AS rate\n             FROM coupons c JOIN activities a ON c.activity_id=a.id\n             GROUP BY a.activity_name ORDER BY rate DESC LIMIT ?",
+      "expected": [
+        [
+          "2025年7月冬日大促",
+          0.7907
+        ],
+        [
+          "2025年12月春日大促",
+          0.775
+        ],
+        [
+          "2025年6月金秋大促",
+          0.7324
+        ]
+      ],
+      "params": [
+        3
+      ],
+      "note": "",
+      "id": "r004",
+      "category": "Top-N",
+      "seed": 7
+    },
+    {
+      "question": "销售额前5的城市是哪些？",
+      "oracle_sql": "SELECT s.city, ROUND(SUM(o.actual_amount),2) AS v FROM orders o\n             JOIN stores s ON o.store_id=s.id WHERE o.status='已完成'\n             GROUP BY s.city ORDER BY v DESC LIMIT 5",
+      "expected": [
+        [
+          "太原",
+          2004128.55
+        ],
+        [
+          "昆明",
+          1948824.72
+        ],
+        [
+          "石家庄",
+          1934036.9
+        ],
+        [
+          "宁波",
+          1917794.16
+        ],
+        [
+          "南京",
+          1910394.96
+        ]
+      ],
+      "params": [],
+      "note": "",
+      "id": "r005",
+      "category": "多表关联",
+      "seed": 7
+    }
+  ]
+}
