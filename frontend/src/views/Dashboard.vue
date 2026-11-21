@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="stats">
-      <div class="stat"><div class="label">订单数据</div><div class="value">2,400</div><div class="hint">orders 表记录数</div></div>
-      <div class="stat"><div class="label">优惠券记录</div><div class="value">514</div><div class="hint">coupons 表记录数</div></div>
-      <div class="stat"><div class="label">活动 / 门店</div><div class="value">12 / 16</div><div class="hint">activities / stores</div></div>
-      <div class="stat"><div class="label">覆盖时间</div><div class="value">2025 全年</div><div class="hint">模拟数据区间</div></div>
+      <div class="stat"><div class="label">订单数据</div><div class="value">20,000</div><div class="hint">orders + 37,508 条明细</div></div>
+      <div class="stat"><div class="label">客户 / 商品</div><div class="value">600 / 20</div><div class="hint">customers / products</div></div>
+      <div class="stat"><div class="label">优惠券 / 活动</div><div class="value">3,682 / 36</div><div class="hint">coupons / activities</div></div>
+      <div class="stat"><div class="label">覆盖时间</div><div class="value">2024–2025</div><div class="hint">两年，含旺季与淡季</div></div>
     </div>
     <div class="card">
       <div class="card-title"><span class="bar"></span>系统能做什么</div>

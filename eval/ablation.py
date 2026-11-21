@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / 'backend'))
 import config
 from semantic import schema_text
 from tools import execute_sql
-from agent import _clean_sql
+from llm_client import clean_sql
 
 QUESTIONS = json.load(open(ROOT / 'eval' / 'questions.json', encoding='utf-8'))
 client = OpenAI(api_key=config.DEEPSEEK_API_KEY, base_url=config.DEEPSEEK_API_BASE)
@@ -39,7 +39,7 @@ def one(question, schema, use_semantic):
     sql, result, retries = '', None, 0
     for attempt in range(config.MAX_SQL_RETRIES + 1):
         resp = client.chat.completions.create(model=config.DEEPSEEK_MODEL, messages=messages, temperature=0)
-        sql = _clean_sql(resp.choices[0].message.content)
+        sql = clean_sql(resp.choices[0].message.content)
         result = execute_sql(sql)
         if result['success']:
             break
