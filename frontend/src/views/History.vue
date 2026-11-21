@@ -21,6 +21,6 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 const rows = ref([])
-async function load(){ try { rows.value = (await axios.get('/api/history?limit=50')).data.data } catch(e){} }
+async function load(){ try { const r = await axios.get('/api/history?limit=50'); rows.value = r.data?.data ?? [] } catch(e){} }
 onMounted(load)
 </script>

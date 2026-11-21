@@ -8,7 +8,7 @@
     </div>
     <div class="card">
       <div class="card-title"><span class="bar"></span>系统能做什么</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:13px;line-height:1.9;color:#4b5563;">
+      <div class="feature-grid">
         <div><b>自然语言查询</b><br>输入中文问题，自动生成 SQL，查真实数据库。</div>
         <div><b>结果可视化</b><br>自动画柱状图/折线图/饼图，可导出 Excel。</div>
         <div><b>SQL 可查看</b><br>每条结果都显示生成的 SQL，看得见、可追溯。</div>

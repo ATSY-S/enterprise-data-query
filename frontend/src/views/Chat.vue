@@ -2,6 +2,7 @@
   <div class="chat-wrap">
     <div class="quick">
       <el-button v-for="q in quickQuestions" :key="q" size="small" plain @click="send(q)">{{ q }}</el-button>
+      <el-switch v-model="confirmMode" size="small" active-text="先确认 SQL" style="margin-left:auto" />
     </div>
     <div class="chat-box" ref="box">
       <div v-if="!messages.length" class="empty">
@@ -21,6 +22,10 @@
               <span>{{ m.result.row_count }} 行结果</span>
             </div>
             <div class="sql-block">{{ m.result.sql }}</div>
+            <div v-if="m.result.pending" style="margin-top:8px">
+              <el-button type="primary" size="small" :loading="m.executing" @click="confirmExecute(m)">确认执行这条 SQL</el-button>
+              <el-button size="small" @click="m.result = null">取消</el-button>
+            </div>
             <table v-if="m.result.data?.length" class="data">
               <thead><tr><th v-for="c in m.result.columns" :key="c">{{ c }}</th></tr></thead>
               <tbody><tr v-for="(row,ri) in m.result.data.slice(0,20)" :key="ri">
@@ -48,6 +53,7 @@ const messages = ref([])
 const input = ref('')
 const loading = ref(false)
 const box = ref(null)
+const confirmMode = ref(false)
 const quickQuestions = ['各品类的销售额分别是多少？','核销率最高的3个活动是哪几个？','2025年月度销售额趋势，画折线图']
 
 async function send(preset) {
@@ -57,14 +63,35 @@ async function send(preset) {
   input.value = ''
   loading.value = true
   try {
-    const r = await axios.post('/api/query', { question:q, want_chart:true })
-    messages.value.push({ role:'ai', content: r.data.success ? '已查询完成，结果如下：' : '查询失败：'+r.data.message, result:r.data })
+    if (confirmMode.value) {
+      const r = await axios.post('/api/preview', { question:q })
+      const d = r.data?.data ?? r.data
+      messages.value.push({ role:'ai', content:'已生成 SQL，请确认后执行：', result:{ ...d, pending:true } })
+    } else {
+      const r = await axios.post('/api/query', { question:q, want_chart:true })
+      const d = r.data?.data ?? r.data
+      messages.value.push({ role:'ai', content: d.success ? '已查询完成，结果如下：' : (d.advice || '查询失败：'+d.message), result:d })
+    }
   } catch (e) {
     messages.value.push({ role:'ai', content:'请求失败：'+e.message })
   } finally {
     loading.value = false
     await nextTick()
     box.value?.scrollTo({ top: box.value.scrollHeight, behavior:'smooth' })
+  }
+}
+
+async function confirmExecute(msg) {
+  msg.executing = true
+  try {
+    const r = await axios.post('/api/execute', { question:msg.result.question, sql:msg.result.sql, want_chart:true })
+    const d = r.data?.data ?? r.data
+    msg.result = d
+    msg.content = d.success ? '已按确认的 SQL 执行完成：' : ('执行失败：' + (d.advice || d.message))
+  } catch (e) {
+    msg.content = '执行请求失败：' + e.message
+  } finally {
+    msg.executing = false
   }
 }
 const fileUrl = p => '/api/file?path=' + encodeURIComponent(p)
