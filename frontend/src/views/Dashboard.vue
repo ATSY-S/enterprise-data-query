@@ -7,6 +7,17 @@
       <div class="stat"><div class="label">覆盖时间</div><div class="value">2024–2025</div><div class="hint">两年，含旺季与淡季</div></div>
     </div>
     <div class="card">
+      <div class="card-title"><span class="bar"></span>数据源（8 张业务表）</div>
+      <div class="source-grid">
+        <div v-for="t in tables" :key="t.name" class="source">
+          <div class="sname">{{ t.name }}</div>
+          <div class="snum">{{ t.rows.toLocaleString() }} <small>行</small></div>
+          <div class="scol">{{ t.columns }} 个字段</div>
+        </div>
+        <div v-if="!tables.length" class="muted">加载中…</div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-title"><span class="bar"></span>系统能做什么</div>
       <div class="feature-grid">
         <div><b>自然语言查询</b><br>输入中文问题，自动生成 SQL，查真实数据库。</div>
@@ -27,3 +38,23 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
+import { authHeader } from '../auth'
+const tables = ref([])
+onMounted(async () => {
+  try { const r = await axios.get('/api/tables', { headers: authHeader() }); tables.value = r.data?.data ?? [] } catch {}
+})
+</script>
+
+<style scoped>
+.source-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); gap: 10px; }
+.source { background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px; padding: 10px 12px; }
+.sname { font-size: 12px; color: #6b7280; }
+.snum { font-size: 18px; color: #1a4d73; font-weight: 500; margin: 4px 0; }
+.snum small { font-size: 11px; color: #9ca3af; }
+.scol { font-size: 11px; color: #9ca3af; }
+.muted { color: #9ca3af; font-size: 12px; }
+</style>

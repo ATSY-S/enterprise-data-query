@@ -1,24 +1,45 @@
-"""API 路由层：只做参数校验、调用服务、封装响应。不含业务逻辑。"""
+"""API 路由层：只做鉴权、参数校验、调用服务、封装响应。不含业务逻辑。"""
+import json
 import logging
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from pathlib import Path
 
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+
+import auth
+import import_service
 import query_service
-from schemas import QueryRequest, SQLRequest, ExecuteRequest, ApiResponse
-from tools import execute_sql, get_statistics, generate_chart, list_history
-import json
+from chart_service import build_chart
+from schemas import (QueryRequest, SQLRequest, ExecuteRequest, ApiResponse,
+                     LoginRequest, ImportRequest)
+from tools import execute_sql, get_statistics, list_history
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
 logger = logging.getLogger('api')
 
-app = FastAPI(title='企业数据智能查询系统 API', version='1.2')
+app = FastAPI(title='企业数据智能查询系统 API', version='2.0')
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'])
+auth.init_users()
 
 
 def ok(data):
     return ApiResponse(data=data)
+
+
+def current_user(authorization: str | None) -> dict:
+    """从 Authorization: Bearer <token> 解析用户；未登录时用匿名身份。"""
+    if not authorization or not authorization.startswith('Bearer '):
+        return {'username': 'anonymous', 'role': 'guest'}
+    user = auth.verify(authorization[7:].strip())
+    return user or {'username': 'anonymous', 'role': 'guest'}
+
+
+def require_admin(authorization: str | None) -> dict:
+    user = current_user(authorization)
+    if user['role'] != 'admin':
+        raise HTTPException(403, '仅管理员可执行此操作')
+    return user
 
 
 @app.get('/api/health')
@@ -26,17 +47,45 @@ def health():
     return ok({'status': 'ok'})
 
 
+# ---------- 认证 ----------
+@app.post('/api/login')
+def login(req: LoginRequest):
+    result = auth.login(req.username, req.password)
+    if not result['success']:
+        return ok(result)
+    logger.info('登录成功: %s', result['username'])
+    return ok(result)
+
+
+@app.post('/api/logout')
+def logout(authorization: str | None = Header(None)):
+    if authorization and authorization.startswith('Bearer '):
+        auth.logout(authorization[7:].strip())
+    return ok({'success': True})
+
+
+@app.get('/api/me')
+def me(authorization: str | None = Header(None)):
+    return ok(current_user(authorization))
+
+
+@app.get('/api/users')
+def users(authorization: str | None = Header(None)):
+    require_admin(authorization)
+    return ok(auth.list_users())
+
+
+# ---------- 查询 ----------
 @app.post('/api/preview')
-def preview(req: SQLRequest):
+def preview(req: SQLRequest, authorization: str | None = Header(None)):
     """只生成 SQL，不执行（人工确认模式第一步）。"""
     logger.info('preview: %s', req.question)
     return ok(query_service.preview(req.question))
 
 
 @app.post('/api/execute')
-def execute(req: ExecuteRequest):
-    """执行用户确认过的 SQL。"""
-    logger.info('execute confirmed SQL for: %s', req.question)
+def execute(req: ExecuteRequest, authorization: str | None = Header(None)):
+    user = current_user(authorization)
     result = execute_sql(req.sql)
     payload = {
         'question': req.question, 'sql': req.sql,
@@ -46,31 +95,68 @@ def execute(req: ExecuteRequest):
         'advice': '' if result['success'] else 'SQL 执行失败，请检查后重新预览。',
     }
     if result['success'] and result['data']:
-        data_json = json.dumps(result['data'], ensure_ascii=False)
+        data_json = json.dumps(result['data'], ensure_ascii=False, default=str)
         payload['statistics'] = get_statistics(data_json).get('data', {})
         if req.want_chart:
-            chart = generate_chart(data_json, title=req.question[:20])
-            if chart['success']:
-                payload['chart_path'] = chart['path']
+            payload['chart'] = build_chart(result['data'], result['columns'],
+                                           title=req.question[:40], hint=req.question)
     return ok(payload)
 
 
 @app.post('/api/query')
-def query(req: QueryRequest):
-    logger.info('query: %s', req.question)
-    return ok(query_service.query(req.question, req.want_chart, req.want_export))
+def query(req: QueryRequest, authorization: str | None = Header(None)):
+    user = current_user(authorization)
+    logger.info('query: %s by %s', req.question, user['username'])
+    return ok(query_service.query(req.question, req.want_chart, req.want_export,
+                                  username=user['username']))
 
 
 @app.get('/api/history')
-def history(limit: int = 20):
-    return ok(list_history(limit).get('data', []))
+def history(limit: int = 20, authorization: str | None = Header(None)):
+    user = current_user(authorization)
+    return ok(list_history(limit, username=user['username'], role=user['role']).get('data', []))
+
+
+# ---------- 数据接入 ----------
+@app.get('/api/tables')
+def tables(authorization: str | None = Header(None)):
+    return ok(import_service.table_info())
+
+
+@app.post('/api/import/preview')
+async def import_preview(file: UploadFile = File(...)):
+    content = await file.read()
+    result = import_service.parse_upload(file.filename or '', content)
+    result.pop('_df', None)
+    return ok(result)
+
+
+@app.post('/api/import/commit')
+async def import_commit(file: UploadFile = File(...), table: str = Form(...),
+                        authorization: str | None = Header(None)):
+    user = require_admin(authorization)
+    content = await file.read()
+    parsed = import_service.parse_upload(file.filename or '', content)
+    if not parsed['success']:
+        return ok(parsed)
+    result = import_service.import_rows(parsed['_df'], table, parsed['columns'])
+    logger.info('数据导入: table=%s by=%s result=%s', table, user['username'], result['success'])
+    return ok(result)
+
+
+@app.get('/api/import/history')
+def import_log(authorization: str | None = Header(None)):
+    require_admin(authorization)
+    return ok(import_service.import_history())
 
 
 @app.get('/api/file')
 def download(path: str):
-    p = Path(path)
-    if not p.exists():
-        raise HTTPException(404, '文件不存在')
+    p = Path(path).resolve()
+    # 只允许下载 output 目录下的文件，防止路径穿越
+    base = Path(__file__).resolve().parent.parent / 'output'
+    if base not in p.parents or not p.exists():
+        raise HTTPException(404, '文件不存在或无权访问')
     return FileResponse(p, filename=p.name)
 
 

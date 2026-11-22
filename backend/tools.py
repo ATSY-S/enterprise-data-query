@@ -120,29 +120,43 @@ def export_to_csv(data_json: str, filename: str = None) -> dict:
         return {'success': False, 'message': str(e)}
 
 
-def save_history(question: str, sql: str, success: bool, rows: int, elapsed: float):
-    """企业成品该有的东西：查询留痕，便于审计与复盘。"""
-    conn = sqlite3.connect(HISTORY_DB)
+def _ensure_history_table(conn):
+    """建表并做向后兼容：老库没有 username 列时补上。"""
     conn.execute('''CREATE TABLE IF NOT EXISTS history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ts TEXT, question TEXT, sql TEXT, success INTEGER, rows INTEGER, elapsed REAL)''')
-    conn.execute('INSERT INTO history(ts,question,sql,success,rows,elapsed) VALUES(?,?,?,?,?,?)',
+        ts TEXT, question TEXT, sql TEXT, success INTEGER, rows INTEGER, elapsed REAL,
+        username TEXT DEFAULT 'anonymous')''')
+    cols = [r[1] for r in conn.execute('PRAGMA table_info(history)').fetchall()]
+    if 'username' not in cols:
+        conn.execute("ALTER TABLE history ADD COLUMN username TEXT DEFAULT 'anonymous'")
+
+
+def save_history(question: str, sql: str, success: bool, rows: int, elapsed: float,
+                 username: str = 'anonymous'):
+    """查询留痕，便于审计与复盘。按用户隔离。"""
+    conn = sqlite3.connect(HISTORY_DB)
+    _ensure_history_table(conn)
+    conn.execute('''INSERT INTO history(ts,question,sql,success,rows,elapsed,username)
+                    VALUES(?,?,?,?,?,?,?)''',
                  (datetime.now().isoformat(timespec='seconds'), question, sql,
-                  int(success), rows, elapsed))
+                  int(success), rows, elapsed, username))
     conn.commit()
     conn.close()
 
 
-def list_history(limit: int = 20) -> dict:
+def list_history(limit: int = 20, username: str = None, role: str = None) -> dict:
     conn = sqlite3.connect(HISTORY_DB)
-    conn.execute('''CREATE TABLE IF NOT EXISTS history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ts TEXT, question TEXT, sql TEXT, success INTEGER, rows INTEGER, elapsed REAL)''')
-    rows = conn.execute('SELECT ts,question,sql,success,rows,elapsed FROM history ORDER BY id DESC LIMIT ?',
-                        (limit,)).fetchall()
+    _ensure_history_table(conn)
+    if role == 'admin' or not username:
+        rows = conn.execute('SELECT ts,question,sql,success,rows,elapsed,username FROM history '
+                            'ORDER BY id DESC LIMIT ?', (limit,)).fetchall()
+    else:
+        rows = conn.execute('SELECT ts,question,sql,success,rows,elapsed,username FROM history '
+                            'WHERE username=? ORDER BY id DESC LIMIT ?', (username, limit)).fetchall()
     conn.close()
     return {'success': True, 'data': [
-        {'ts': r[0], 'question': r[1], 'sql': r[2], 'success': bool(r[3]), 'rows': r[4], 'elapsed': r[5]}
+        {'ts': r[0], 'question': r[1], 'sql': r[2], 'success': bool(r[3]),
+         'rows': r[4], 'elapsed': r[5], 'username': r[6]}
         for r in rows]}
 
 

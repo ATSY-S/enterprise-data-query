@@ -33,7 +33,7 @@
               </tr></tbody>
             </table>
             <div v-if="m.result.row_count>20" style="font-size:11px;color:#9ca3af;margin-top:6px">仅展示前 20 行</div>
-            <img v-if="m.result.chart_path" class="chart-img" :src="fileUrl(m.result.chart_path)" alt="图表" />
+            <ChartView v-if="m.result.chart?.available" :chart="m.result.chart" />
             <el-button v-if="m.result.export_path" size="small" style="margin-top:8px" @click="download(m.result.export_path)">下载 Excel</el-button>
           </template>
         </div>
@@ -49,6 +49,8 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import axios from 'axios'
+import ChartView from '../components/ChartView.vue'
+import { authHeader } from '../auth'
 const messages = ref([])
 const input = ref('')
 const loading = ref(false)
@@ -64,11 +66,11 @@ async function send(preset) {
   loading.value = true
   try {
     if (confirmMode.value) {
-      const r = await axios.post('/api/preview', { question:q })
+      const r = await axios.post('/api/preview', { question:q }, { headers: authHeader() })
       const d = r.data?.data ?? r.data
       messages.value.push({ role:'ai', content:'已生成 SQL，请确认后执行：', result:{ ...d, pending:true } })
     } else {
-      const r = await axios.post('/api/query', { question:q, want_chart:true })
+      const r = await axios.post('/api/query', { question:q, want_chart:true }, { headers: authHeader() })
       const d = r.data?.data ?? r.data
       messages.value.push({ role:'ai', content: d.success ? '已查询完成，结果如下：' : (d.advice || '查询失败：'+d.message), result:d })
     }
@@ -84,7 +86,7 @@ async function send(preset) {
 async function confirmExecute(msg) {
   msg.executing = true
   try {
-    const r = await axios.post('/api/execute', { question:msg.result.question, sql:msg.result.sql, want_chart:true })
+    const r = await axios.post('/api/execute', { question:msg.result.question, sql:msg.result.sql, want_chart:true }, { headers: authHeader() })
     const d = r.data?.data ?? r.data
     msg.result = d
     msg.content = d.success ? '已按确认的 SQL 执行完成：' : ('执行失败：' + (d.advice || d.message))

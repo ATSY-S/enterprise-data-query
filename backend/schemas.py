@@ -18,6 +18,16 @@ class ExecuteRequest(BaseModel):
     want_chart: bool = True
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., min_length=1, max_length=100)
+
+
+class ImportRequest(BaseModel):
+    table: str = Field(..., min_length=1, max_length=50)
+    mode: str = 'append'
+
+
 class ApiResponse(BaseModel):
     code: int = 0
     message: str = 'ok'

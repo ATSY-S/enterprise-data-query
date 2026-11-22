@@ -12,6 +12,7 @@
         </template></el-table-column>
         <el-table-column prop="rows" label="行数" width="70" />
         <el-table-column prop="elapsed" label="耗时(s)" width="80" />
+        <el-table-column prop="username" label="用户" width="100" />
       </el-table>
       <div v-if="!rows.length" class="empty">暂无查询记录，先去「智能查询」问一句吧。</div>
     </div>
@@ -20,7 +21,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { authHeader } from '../auth'
 const rows = ref([])
-async function load(){ try { const r = await axios.get('/api/history?limit=50'); rows.value = r.data?.data ?? [] } catch(e){} }
+async function load(){ try { const r = await axios.get('/api/history?limit=50', { headers: authHeader() }); rows.value = r.data?.data ?? [] } catch(e){} }
 onMounted(load)
 </script>
