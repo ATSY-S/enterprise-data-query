@@ -10,9 +10,11 @@ from fastapi.responses import FileResponse
 import auth
 import import_service
 import query_service
+import request_service
 from chart_service import build_chart
+from labels import column_labels
 from schemas import (QueryRequest, SQLRequest, ExecuteRequest, ApiResponse,
-                     LoginRequest, ImportRequest)
+                     LoginRequest, ImportRequest, ReviewRequest)
 from tools import execute_sql, get_statistics, list_history
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
@@ -90,6 +92,7 @@ def execute(req: ExecuteRequest, authorization: str | None = Header(None)):
     payload = {
         'question': req.question, 'sql': req.sql,
         'success': result['success'], 'columns': result['columns'],
+        'column_labels': column_labels(result['columns']),
         'data': result['data'], 'row_count': result['row_count'],
         'message': result['message'], 'retries': 0, 'error_type': None,
         'advice': '' if result['success'] else 'SQL 执行失败，请检查后重新预览。',
@@ -148,6 +151,40 @@ async def import_commit(file: UploadFile = File(...), table: str = Form(...),
 def import_log(authorization: str | None = Header(None)):
     require_admin(authorization)
     return ok(import_service.import_history())
+
+
+# ---------- 导入申请与审批 ----------
+@app.post('/api/requests')
+def submit_request(req: ImportRequest, authorization: str | None = Header(None)):
+    user = current_user(authorization)
+    if user['role'] == 'guest':
+        raise HTTPException(401, '请先登录')
+    result = request_service.submit(user['username'], req.filename, req.table, req.reason)
+    logger.info('导入申请: %s by %s -> %s', req.filename, user['username'], result['success'])
+    return ok(result)
+
+
+@app.get('/api/requests')
+def list_requests(status: str = None, authorization: str | None = Header(None)):
+    user = current_user(authorization)
+    return ok(request_service.list_requests(applicant=user['username'],
+                                            role=user['role'], status=status))
+
+
+@app.get('/api/requests/pending-count')
+def pending_count(authorization: str | None = Header(None)):
+    user = current_user(authorization)
+    if user['role'] != 'admin':
+        return ok({'count': 0})
+    return ok({'count': request_service.pending_count()})
+
+
+@app.post('/api/requests/{request_id}/review')
+def review_request(request_id: int, req: ReviewRequest, authorization: str | None = Header(None)):
+    user = require_admin(authorization)
+    result = request_service.review(request_id, user['username'], req.approve, req.note)
+    logger.info('审批申请 #%s by %s -> %s', request_id, user['username'], result['success'])
+    return ok(result)
 
 
 @app.get('/api/file')

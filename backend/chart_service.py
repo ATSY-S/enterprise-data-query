@@ -9,15 +9,12 @@ from datetime import date, datetime
 
 import pandas as pd
 
+from labels import label_of
+
 
 def _label_key(col: str) -> str:
-    """把字段名转成更友好的坐标名。"""
-    mapping = {
-        'region': '地区', 'city': '城市', 'category': '品类', 'channel': '渠道',
-        'store_name': '门店', 'member_level': '会员等级', 'month': '月份',
-        'order_date': '日期', 'activity_name': '活动', 'gender': '性别',
-    }
-    return mapping.get(col, col)
+    """字段名统一中文（映射表在 labels.py，与表格共用）。"""
+    return label_of(col)
 
 
 def _fmt(v):

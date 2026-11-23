@@ -2,6 +2,7 @@
 import json
 from tools import get_statistics, export_to_excel, save_history
 from chart_service import build_chart
+from labels import column_labels
 from sql_service import generate as sql_generate, generate_and_execute
 
 
@@ -9,6 +10,8 @@ def query(question: str, want_chart: bool = True, want_export: bool = False,
           username: str = 'anonymous') -> dict:
     r = generate_and_execute(question)
     out = {'question': question, **r}
+    if r.get('columns'):
+        out['column_labels'] = column_labels(r['columns'])
 
     if r['success'] and r['data']:
         data_json = json.dumps(r['data'], ensure_ascii=False, default=str)

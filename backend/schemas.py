@@ -25,7 +25,14 @@ class LoginRequest(BaseModel):
 
 class ImportRequest(BaseModel):
     table: str = Field(..., min_length=1, max_length=50)
+    filename: str = Field('', max_length=200)
+    reason: str = Field('', max_length=300)
     mode: str = 'append'
+
+
+class ReviewRequest(BaseModel):
+    approve: bool
+    note: str = ''
 
 
 class ApiResponse(BaseModel):

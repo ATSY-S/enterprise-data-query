@@ -6,7 +6,15 @@
       <div class="stat"><div class="label">优惠券 / 活动</div><div class="value">3,682 / 36</div><div class="hint">coupons / activities</div></div>
       <div class="stat"><div class="label">覆盖时间</div><div class="value">2024–2025</div><div class="hint">两年，含旺季与淡季</div></div>
     </div>
-    <div class="card">
+    <div class="card" v-if="!isAdmin">
+      <div class="card-title"><span class="bar"></span>欢迎使用</div>
+      <div class="feature-grid">
+        <div><b>直接提问</b><br>用中文问销售额、核销率、门店排名等问题，系统自动生成 SQL 并查询。</div>
+        <div><b>结果可下载</b><br>查询结果可导出 Excel，图表能放大、切换类型、下载 PNG。</div>
+        <div><b>需要新数据？</b><br>在左侧「我的申请」提交导入申请，管理员审批后即可导入。</div>
+      </div>
+    </div>
+    <div class="card" v-if="isAdmin">
       <div class="card-title"><span class="bar"></span>数据源（8 张业务表）</div>
       <div class="source-grid">
         <div v-for="t in tables" :key="t.name" class="source">
@@ -42,9 +50,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { authHeader } from '../auth'
+import { authHeader, currentUser } from '../auth'
+const isAdmin = currentUser()?.role === 'admin'
 const tables = ref([])
 onMounted(async () => {
+  if (!isAdmin) return
   try { const r = await axios.get('/api/tables', { headers: authHeader() }); tables.value = r.data?.data ?? [] } catch {}
 })
 </script>

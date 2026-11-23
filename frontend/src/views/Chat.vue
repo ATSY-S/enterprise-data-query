@@ -27,7 +27,7 @@
               <el-button size="small" @click="m.result = null">取消</el-button>
             </div>
             <table v-if="m.result.data?.length" class="data">
-              <thead><tr><th v-for="c in m.result.columns" :key="c">{{ c }}</th></tr></thead>
+              <thead><tr><th v-for="c in m.result.columns" :key="c">{{ m.result.column_labels?.[c] || c }}</th></tr></thead>
               <tbody><tr v-for="(row,ri) in m.result.data.slice(0,20)" :key="ri">
                 <td v-for="c in m.result.columns" :key="c">{{ row[c] }}</td>
               </tr></tbody>
