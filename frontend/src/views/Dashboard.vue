@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="stats">
-      <div class="stat"><div class="label">订单数据</div><div class="value">20,000</div><div class="hint">2 万笔订单 · 3.7 万条明细</div></div>
-      <div class="stat"><div class="label">客户 / 商品</div><div class="value">600 / 20</div><div class="hint">600 位客户 · 20 种商品</div></div>
-      <div class="stat"><div class="label">优惠券 / 活动</div><div class="value">3,682 / 36</div><div class="hint">3682 张券 · 36 场活动</div></div>
-      <div class="stat"><div class="label">覆盖时间</div><div class="value">2024–2025</div><div class="hint">两年，含旺季与淡季</div></div>
+      <div class="stat"><div class="label">订单数据</div><div class="value">{{ fmt(stats.orders) }}</div><div class="hint">{{ fmt(stats.orders) }} 笔订单 · {{ fmt(stats.order_items) }} 条明细</div></div>
+      <div class="stat"><div class="label">客户 / 商品</div><div class="value">{{ fmt(stats.customers) }} / {{ fmt(stats.products) }}</div><div class="hint">{{ fmt(stats.customers) }} 位客户 · {{ fmt(stats.products) }} 种商品</div></div>
+      <div class="stat"><div class="label">优惠券 / 活动</div><div class="value">{{ fmt(stats.coupons) }} / {{ fmt(stats.activities) }}</div><div class="hint">{{ fmt(stats.coupons) }} 张券 · {{ fmt(stats.activities) }} 场活动</div></div>
+      <div class="stat"><div class="label">覆盖时间</div><div class="value">{{ yearRange }}</div><div class="hint">含旺季与淡季</div></div>
     </div>
     <div class="card" v-if="!isAdmin">
       <div class="card-title"><span class="bar"></span>欢迎使用</div>
@@ -48,10 +48,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import { authHeader, currentUser } from '../auth'
 const isAdmin = currentUser()?.role === 'admin'
+const stats = ref({})
+const fmt = n => n == null ? '—' : Number(n).toLocaleString()
+const yearRange = computed(() => {
+  if (!stats.value.date_start) return '—'
+  return stats.value.date_start.slice(0, 4) + '–' + (stats.value.date_end || '').slice(0, 4)
+})
 const tableNames = {
   orders: '订单表', order_items: '订单明细表', customers: '客户表',
   products: '商品表', stores: '门店表', employees: '员工表',
@@ -59,6 +65,7 @@ const tableNames = {
 }
 const tables = ref([])
 onMounted(async () => {
+  try { const r = await axios.get('/api/stats', { headers: authHeader() }); stats.value = r.data?.data ?? {} } catch {}
   if (!isAdmin) return
   try { const r = await axios.get('/api/tables', { headers: authHeader() }); tables.value = r.data?.data ?? [] } catch {}
 })

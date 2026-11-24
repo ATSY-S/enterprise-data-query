@@ -127,6 +127,20 @@ def tables(authorization: str | None = Header(None)):
     return ok(import_service.table_info())
 
 
+@app.get('/api/stats')
+def stats(authorization: str | None = Header(None)):
+    """概览页统计：从业务库实时统计，避免前端写死数字。"""
+    import sqlite3
+    from config import DATABASE_PATH
+    c = sqlite3.connect(DATABASE_PATH)
+    tables = ['orders', 'order_items', 'customers', 'products',
+              'coupons', 'activities', 'stores', 'employees']
+    counts = {t: c.execute(f'SELECT COUNT(*) FROM {t}').fetchone()[0] for t in tables}
+    date_range = c.execute('SELECT MIN(order_date), MAX(order_date) FROM orders').fetchone()
+    c.close()
+    return ok({**counts, 'date_start': date_range[0], 'date_end': date_range[1]})
+
+
 @app.get('/api/semantics')
 def semantics(authorization: str | None = Header(None)):
     """语义层定义：指标口径、业务维度、术语（前端指标页读取真实数据）。"""
