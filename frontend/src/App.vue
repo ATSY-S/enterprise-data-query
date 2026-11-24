@@ -65,13 +65,14 @@ const menu = [
   { key:'dashboard', label:'数据概览', icon:'DataAnalysis' },
   { key:'chat', label:'智能查询', icon:'ChatDotRound' },
   { key:'import', label:'数据导入', icon:'UploadFilled', adminOnly:true },
-  { key:'requests', label:'我的申请', icon:'Tickets' },
+  { key:'requests', label:'我的申请', icon:'Tickets', userOnly:true },
   { key:'approvals', label:'导入审批', icon:'Checked', adminOnly:true },
   { key:'history', label:'查询历史', icon:'Clock' },
   { key:'metrics', label:'指标口径', icon:'Document' },
   { key:'about', label:'系统说明', icon:'InfoFilled' },
 ]
-const visibleMenu = computed(() => menu.filter(m => !m.adminOnly || isAdmin.value))
+const visibleMenu = computed(() => menu.filter(m =>
+  (!m.adminOnly || isAdmin.value) && (!m.userOnly || !isAdmin.value)))
 const titles = {
   dashboard:['数据概览','了解系统当前的数据规模与运行状态'],
   chat:['智能查询','用中文提问，系统自动生成 SQL 并查询数据库'],

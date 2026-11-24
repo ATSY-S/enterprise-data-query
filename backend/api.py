@@ -155,12 +155,14 @@ def import_log(authorization: str | None = Header(None)):
 
 # ---------- 导入申请与审批 ----------
 @app.post('/api/requests')
-def submit_request(req: ImportRequest, authorization: str | None = Header(None)):
+async def submit_request(file: UploadFile = File(...), table: str = Form(...),
+                         reason: str = Form(''), authorization: str | None = Header(None)):
     user = current_user(authorization)
     if user['role'] == 'guest':
         raise HTTPException(401, '请先登录')
-    result = request_service.submit(user['username'], req.filename, req.table, req.reason)
-    logger.info('导入申请: %s by %s -> %s', req.filename, user['username'], result['success'])
+    content = await file.read()
+    result = request_service.submit(user['username'], file.filename or '', table, reason, content)
+    logger.info('导入申请: %s by %s -> %s', file.filename, user['username'], result['success'])
     return ok(result)
 
 
@@ -179,11 +181,25 @@ def pending_count(authorization: str | None = Header(None)):
     return ok({'count': request_service.pending_count()})
 
 
+@app.get('/api/requests/{request_id}/preview')
+def preview_request_file(request_id: int, authorization: str | None = Header(None)):
+    require_admin(authorization)
+    return ok(request_service.preview_file(request_id))
+
+
 @app.post('/api/requests/{request_id}/review')
 def review_request(request_id: int, req: ReviewRequest, authorization: str | None = Header(None)):
     user = require_admin(authorization)
     result = request_service.review(request_id, user['username'], req.approve, req.note)
     logger.info('审批申请 #%s by %s -> %s', request_id, user['username'], result['success'])
+    return ok(result)
+
+
+@app.post('/api/requests/{request_id}/import')
+def import_request_file(request_id: int, authorization: str | None = Header(None)):
+    user = require_admin(authorization)
+    result = request_service.import_approved(request_id, user['username'])
+    logger.info('执行申请导入 #%s by %s -> %s', request_id, user['username'], result['success'])
     return ok(result)
 
 

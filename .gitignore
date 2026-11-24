@@ -23,6 +23,7 @@ output/*.log
 output/*/*.db
 output/eval/*.json
 data/query_history.db
+data/import_uploads/
 
 # 编辑器 / 系统
 .vscode/
