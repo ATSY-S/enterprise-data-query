@@ -1,9 +1,9 @@
 <template>
   <div>
     <div class="stats">
-      <div class="stat"><div class="label">订单数据</div><div class="value">20,000</div><div class="hint">orders + 37,508 条明细</div></div>
-      <div class="stat"><div class="label">客户 / 商品</div><div class="value">600 / 20</div><div class="hint">customers / products</div></div>
-      <div class="stat"><div class="label">优惠券 / 活动</div><div class="value">3,682 / 36</div><div class="hint">coupons / activities</div></div>
+      <div class="stat"><div class="label">订单数据</div><div class="value">20,000</div><div class="hint">2 万笔订单 · 3.7 万条明细</div></div>
+      <div class="stat"><div class="label">客户 / 商品</div><div class="value">600 / 20</div><div class="hint">600 位客户 · 20 种商品</div></div>
+      <div class="stat"><div class="label">优惠券 / 活动</div><div class="value">3,682 / 36</div><div class="hint">3682 张券 · 36 场活动</div></div>
       <div class="stat"><div class="label">覆盖时间</div><div class="value">2024–2025</div><div class="hint">两年，含旺季与淡季</div></div>
     </div>
     <div class="card" v-if="!isAdmin">
@@ -18,9 +18,9 @@
       <div class="card-title"><span class="bar"></span>数据源（8 张业务表）</div>
       <div class="source-grid">
         <div v-for="t in tables" :key="t.name" class="source">
-          <div class="sname">{{ t.name }}</div>
+          <div class="sname">{{ tableNames[t.name] || t.name }}</div>
           <div class="snum">{{ t.rows.toLocaleString() }} <small>行</small></div>
-          <div class="scol">{{ t.columns }} 个字段</div>
+          <div class="scol">{{ t.columns }} 个字段 · {{ t.name }}</div>
         </div>
         <div v-if="!tables.length" class="muted">加载中…</div>
       </div>
@@ -52,6 +52,11 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { authHeader, currentUser } from '../auth'
 const isAdmin = currentUser()?.role === 'admin'
+const tableNames = {
+  orders: '订单表', order_items: '订单明细表', customers: '客户表',
+  products: '商品表', stores: '门店表', employees: '员工表',
+  activities: '活动表', coupons: '优惠券表',
+}
 const tables = ref([])
 onMounted(async () => {
   if (!isAdmin) return

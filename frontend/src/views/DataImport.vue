@@ -36,7 +36,7 @@
       <div class="form-row">
         <span>追加到表：</span>
         <el-select v-model="target" placeholder="选择业务表" style="width:220px">
-          <el-option v-for="t in allowedTables" :key="t" :label="t" :value="t" />
+          <el-option v-for="t in allowedTables" :key="t" :label="tableLabel[t] || t" :value="t" />
         </el-select>
         <span class="muted">文件中的列：{{ parsed.columns.join('、') }}</span>
       </div>
@@ -54,7 +54,7 @@
     <div class="card" v-if="isAdmin">
       <div class="card-title"><span class="bar"></span>近期导入记录</div>
       <div v-if="!logs.length" class="muted">暂无记录</div>
-      <div v-for="(l,i) in logs" :key="i" class="log">{{ l.ts }} · {{ l.table }} · 尝试 {{ l.attempted }} 行，成功 {{ l.inserted }} 行</div>
+      <div v-for="(l,i) in logs" :key="i" class="log">{{ l.ts }} · {{ tableLabel[l.table] || l.table }} · 尝试 {{ l.attempted }} 行，成功 {{ l.inserted }} 行</div>
     </div>
   </div>
 </template>
@@ -64,6 +64,7 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { authHeader, currentUser } from '../auth'
 const allowedTables = ['orders','order_items','customers','products','stores','activities','coupons']
+const tableLabel = { orders:'订单表', order_items:'订单明细表', customers:'客户表', products:'商品表', stores:'门店表', activities:'活动表', coupons:'优惠券表' }
 const isAdmin = currentUser()?.role === 'admin'
 const step = ref(1), file = ref(null), fileName = ref(''), parsed = ref(null)
 const target = ref(''), busy = ref(false), result = ref(null), logs = ref([])

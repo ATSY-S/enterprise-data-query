@@ -13,6 +13,7 @@ import query_service
 import request_service
 from chart_service import build_chart
 from labels import column_labels
+from semantic import METRICS, DIMENSIONS, TERMS
 from schemas import (QueryRequest, SQLRequest, ExecuteRequest, ApiResponse,
                      LoginRequest, ImportRequest, ReviewRequest)
 from tools import execute_sql, get_statistics, list_history
@@ -124,6 +125,23 @@ def history(limit: int = 20, authorization: str | None = Header(None)):
 @app.get('/api/tables')
 def tables(authorization: str | None = Header(None)):
     return ok(import_service.table_info())
+
+
+@app.get('/api/semantics')
+def semantics(authorization: str | None = Header(None)):
+    """语义层定义：指标口径、业务维度、术语（前端指标页读取真实数据）。"""
+    def metric_expr(v):
+        if v.get('formula'):
+            return v['formula']
+        if v.get('field') and v.get('agg'):
+            return f"{v['agg']}({v['field']})"
+        return v.get('field', '')
+
+    metrics = [{'name': k, 'expr': metric_expr(v), 'desc': v.get('desc', '')}
+               for k, v in METRICS.items()]
+    dims = [{'name': k, 'desc': v} for k, v in DIMENSIONS.items()]
+    terms = [{'name': k, 'desc': v} for k, v in TERMS.items()]
+    return ok({'metrics': metrics, 'dimensions': dims, 'terms': terms})
 
 
 @app.post('/api/import/preview')
