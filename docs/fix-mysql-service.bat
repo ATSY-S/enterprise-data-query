@@ -23,20 +23,33 @@ if not exist "%DATA_DIR%" mkdir "%DATA_DIR%"
 echo [2/5] 写入 my.ini
 copy /Y "%~dp0mysql-my.ini" "%CONF_DIR%\my.ini" >nul
 
-echo [3/5] 初始化数据目录（首次运行需要，已初始化可跳过）
-if not exist "%DATA_DIR%\mysql" (
+echo [3/6] 初始化数据目录（首次运行需要，已初始化可跳过）
+set NEED_INIT=0
+if not exist "%DATA_DIR%\mysql" set NEED_INIT=1
+if "%NEED_INIT%"=="1" (
     "%MYSQL_HOME%\bin\mysqld.exe" --defaults-file="%CONF_DIR%\my.ini" --initialize-insecure --console
 )
 
-echo [4/5] 授权 NetworkService 访问数据目录
+echo [4/6] 授权 NetworkService 访问数据目录
 icacls "%CONF_DIR%" /grant "NT AUTHORITY\NetworkService:(OI)(CI)F" /T /Q
 
-echo [5/5] 启动服务
+echo [5/6] 启动服务
 sc config MYSQL80 binPath= "\"%MYSQL_HOME%\bin\mysqld.exe\" --defaults-file=\"%CONF_DIR%\my.ini\" MYSQL80"
 net start MYSQL80
 
+echo [6/6] 设置 root 密码为 123456
+if "%NEED_INIT%"=="1" (
+    "%MYSQL_HOME%\bin\mysql.exe" -h127.0.0.1 -uroot --skip-password -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '123456'; FLUSH PRIVILEGES;"
+    echo root 密码已设为 123456
+) else (
+    echo 数据目录已存在，跳过（如密码不对请手动执行：）
+    echo   mysql -uroot -p123456 -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '123456';"
+)
+
 echo.
-echo 完成。用以下命令测试（密码为空）：
-echo   "%MYSQL_HOME%\bin\mysql.exe" -u root -p
+echo 完成。DataGrip 连接参数：
+echo   主机 localhost  端口 3306  用户 root  密码 123456
+echo 命令行测试：
+echo   "%MYSQL_HOME%\bin\mysql.exe" -h127.0.0.1 -uroot -p123456
 echo.
 pause
