@@ -106,6 +106,9 @@ def import_rows(df: pd.DataFrame, table: str, columns: list) -> dict:
     after = c.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
     c.close()
     _log_import(table, len(df), after - before)
+    # 数据变更后必须清缓存，否则用户查到旧结果
+    from cache_service import invalidate
+    invalidate()
     return {'success': True, 'inserted': after - before, 'table': table,
             'message': f'已导入 {after - before} 行到 {table}'}
 

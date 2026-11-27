@@ -69,33 +69,77 @@ TERMS = {
 }
 
 
-def schema_text() -> str:
-    """生成给大模型看的数据库结构说明（注入系统提示词）。"""
+# 表结构定义（单一数据源）
+TABLE_SCHEMAS = {
+    'stores': 'stores(id, store_name, region, city, store_level)',
+    'employees': 'employees(id, name, store_id, role)',
+    'customers': 'customers(id, customer_name, customer_type, member_level, city, register_date)',
+    'products': 'products(id, product_name, category, unit_price, cost_price)',
+    'activities': 'activities(id, activity_name, channel, start_date, end_date, budget)',
+    'coupons': 'coupons(id, activity_id, customer_id, store_id, receive_date, verify_date, status, discount_amount)',
+    'orders': 'orders(id, order_no, order_date, customer_id, store_id, employee_id, total_amount, discount_amount, actual_amount, status, payment_method)',
+    'order_items': 'order_items(id, order_id, product_id, quantity, unit_price, subtotal)',
+}
+
+JOINS = [
+    '- orders.customer_id = customers.id',
+    '- orders.store_id = stores.id',
+    '- orders.employee_id = employees.id',
+    '- order_items.order_id = orders.id',
+    '- order_items.product_id = products.id',
+    '- coupons.activity_id = activities.id',
+    '- coupons.customer_id = customers.id',
+    '- coupons.store_id = stores.id',
+]
+
+# 业务关键词 → 相关表（用于表结构裁剪）
+TABLE_KEYWORDS = {
+    'orders': ['订单', '销售额', '实付', '金额', '支付', '订单量', '客单价', '月', '日期', '趋势', '渠道销售'],
+    'order_items': ['销量', '明细', '商品销售', '品类', '毛利', '成本', '件数'],
+    'customers': ['客户', '会员', 'vip', '注册', '客户类型', '白金', '金卡'],
+    'products': ['商品', '品类', '单价', '成本', '毛利', '产品'],
+    'activities': ['活动', '预算', '渠道核销', '营销', '活动名称'],
+    'coupons': ['券', '核销', '领券', '优惠'],
+    'stores': ['门店', '地区', '城市', '区域'],
+    'employees': ['员工', '店员', '医生', '职员'],
+}
+
+# 这些表几乎任何业务查询都可能用到，始终保留
+CORE_TABLES = {'orders'}
+
+
+def _select_tables(question: str) -> list[str]:
+    """按问题关键词选表；命中不到时退回全部表，保证不漏。"""
+    if not question:
+        return list(TABLE_SCHEMAS)
+    q = question.lower()
+    selected = set(CORE_TABLES)
+    for table, keywords in TABLE_KEYWORDS.items():
+        if any(k in q for k in keywords):
+            selected.add(table)
+    # 核销率/品类等需要 JOIN，补上关联表
+    if 'coupons' in selected or '活动' in q:
+        selected.add('activities')
+    if 'order_items' in selected or '毛利' in q:
+        selected.add('products')
+    if '地区' in q or '城市' in q or '门店' in q:
+        selected.add('stores')
+    return [t for t in TABLE_SCHEMAS if t in selected]
+
+
+def _build_schema(tables: list[str]) -> str:
     lines = [
-        "数据库为 SQLite，共 8 张表。只允许 SELECT，禁止任何 DML/DDL。",
+        f"数据库为 SQLite，当前问题相关表 {len(tables)} 张。只允许 SELECT，禁止任何 DML/DDL。",
         "",
         "表结构：",
-        "stores(id, store_name, region, city, store_level)",
-        "employees(id, name, store_id, role)",
-        "customers(id, customer_name, customer_type, member_level, city, register_date)",
-        "products(id, product_name, category, unit_price, cost_price)",
-        "activities(id, activity_name, channel, start_date, end_date, budget)",
-        "coupons(id, activity_id, customer_id, store_id, receive_date, verify_date, status, discount_amount)",
-        "orders(id, order_no, order_date, customer_id, store_id, employee_id, total_amount, discount_amount, actual_amount, status, payment_method)",
-        "order_items(id, order_id, product_id, quantity, unit_price, subtotal)",
-        "",
-        "已验证的关联关系（只能使用这些 JOIN）：",
-        "- orders.customer_id = customers.id",
-        "- orders.store_id = stores.id",
-        "- orders.employee_id = employees.id",
-        "- order_items.order_id = orders.id",
-        "- order_items.product_id = products.id",
-        "- coupons.activity_id = activities.id",
-        "- coupons.customer_id = customers.id",
-        "- coupons.store_id = stores.id",
-        "",
-        "业务指标口径（用户提到这些词时严格按此计算）：",
     ]
+    lines.extend(TABLE_SCHEMAS[t] for t in tables)
+    lines.extend(["", "已验证的关联关系（只能使用这些 JOIN）："])
+    table_set = set(tables)
+    for join in JOINS:
+        if any(join.find(f'{t}.') >= 0 for t in table_set):
+            lines.append(join)
+    lines.extend(["", "业务指标口径（用户提到这些词时严格按此计算）："])
     for name, meta in METRICS.items():
         expr = meta.get('formula') or f"{meta['agg']}({meta['field']})"
         lines.append(f"- {name}：{expr}。{meta['desc']}")
@@ -106,6 +150,21 @@ def schema_text() -> str:
     for name, desc in TERMS.items():
         lines.append(f"- {name}：{desc}")
     return '\n'.join(lines)
+
+
+def schema_text(question: str | None = None) -> str:
+    """生成给大模型看的库结构说明。
+
+    question 为空时返回完整 8 张表（兼容旧调用与评测脚本）；
+    传入问题时按关键词裁剪，减少提示词长度。
+    """
+    tables = _select_tables(question) if question else list(TABLE_SCHEMAS)
+    return _build_schema(tables)
+
+
+def selected_tables(question: str) -> list[str]:
+    """暴露给评测：查看裁剪结果。"""
+    return _select_tables(question)
 
 
 if __name__ == '__main__':

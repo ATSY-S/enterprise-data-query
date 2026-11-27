@@ -50,7 +50,9 @@ npm run dev
 ## 目录
 
 ```
-backend/   后端：配置、建表、语义层、认证、导入、图表、工具、分层服务、API
+backend/   后端：config(类型安全配置)/exceptions(异常体系)/dependencies(依赖注入)
+           /logging_config(日志)/api(路由)/query_service/sql_service/llm_client
+           /stats_service/cache_service/import_service/request_service/auth/semantic
 data/      SQLite 业务库与历史库
 eval/      随机出题、标准答案评测与 A/B 消融
 frontend/  Vue 3 前端（ECharts 交互图表、登录、数据导入）

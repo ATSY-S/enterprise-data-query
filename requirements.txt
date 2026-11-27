@@ -2,6 +2,7 @@
 # Python 3.10+（开发用 3.12）
 openai>=1.0
 python-dotenv>=1.0
+pydantic-settings>=2.0
 fastapi>=0.100
 uvicorn>=0.20
 pandas>=2.0
